@@ -5,15 +5,18 @@ from typing import Tuple
 Node = Tuple[int,int]
 
 
-def reconstruct_path(came_from, start, current_node):
+def reconstruct_path(came_from, start, current_node, isForward=True):
 
   path = []
   while current_node in came_from:
     path.append(current_node)
-    current = came_from[current]
+    current_node = came_from[current_node]
 
   path.append(start)
-  path.reverse()
+
+  if isForward:
+    path.reverse()
+
   return path
 
 
@@ -27,6 +30,20 @@ def calc_heuristic(current_node, goal_node):
   distance_goal = abs(curr_node_x - goal_node_x) + abs(curr_node_y - goal_node_y)
   return distance_goal
 
+# builds a connected path from the two paths
+def build_bi_path(parent_forward_dic, parent_back_dic, meet_node, start_node, goal_node):
+  if meet_node is None:
+    return []
+  
+  forward_path = reconstruct_path(parent_forward_dic, start_node, meet_node)
+  backward_path = reconstruct_path(parent_back_dic, goal_node, meet_node, isForward=False)
+
+  # combine the path
+  # remove the repetition in the backward path
+  full_path = forward_path + backward_path[1:]
+
+  return full_path
+  
 
 ## ALGOS
 def dijkstra(graph, start_node, goal_node):
@@ -161,7 +178,17 @@ def bidirectional_dijkstra(graph, start_node, goal_node):
       else:
         smallest_in_b_prio_que = float('inf')
       
-      
+      if smallest_in_f_prio_que + smallest_in_b_prio_que >= shared_converge_state['best_path_cost']:
+        return (shared_converge_state['best_path_cost'], 
+                shared_converge_state['num_nodes_explored'],
+                build_bi_path(
+                  parent_forw,
+                  parent_back,
+                  shared_converge_state['meet_node'],
+                  start_node,
+                  goal_node
+                )
+                )
 
 
 
