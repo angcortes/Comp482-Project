@@ -83,7 +83,7 @@ def dijkstra(graph, start_node, goal_node):
 
   return float('inf'), nodes_explored, []
 
-def a_star(graph, start:Node, goal:Node):
+def a_star(graph, start, goal):
 
   prio_queue = [(0, start)]
   g_score = {start: 0}
