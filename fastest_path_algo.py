@@ -1,10 +1,11 @@
 import heapq
+import random
 from typing import Tuple
 
 # Types
 Node = Tuple[int,int]
 
-
+# HELPER FUNCTIONS
 def reconstruct_path(came_from, start, current_node, isForward=True):
 
   path = []
@@ -27,8 +28,8 @@ def calc_heuristic(current_node, goal_node):
   goal_node_y = goal_node[1]
 
   # uses manhattan method to get distance
-  distance_goal = abs(curr_node_x - goal_node_x) + abs(curr_node_y - goal_node_y)
-  return distance_goal
+  distance_to_goal = abs(curr_node_x - goal_node_x) + abs(curr_node_y - goal_node_y)
+  return distance_to_goal
 
 # builds a connected path from the two paths
 def build_bi_path(parent_forward_dic, parent_back_dic, meet_node, start_node, goal_node):
@@ -191,7 +192,43 @@ def bidirectional_dijkstra(graph, start_node, goal_node):
                 )
 
 
+## creates 2 dimensional graph with walls(holes)
+def create_grid(size, obstacle_prob=0.3):
 
+  graph = {}
+  nodes = set()
+  walls = set()
+
+  start = (0,0)
+  goal = (size -1, size-1)
+
+  for x in range(size):
+    for y in range(size):
+      current = (x,y)
+
+      ## make sure start and goal are not walls
+      if current == start or current == goal:
+        nodes.add(current)
+        continue
+      
+      # randomly add disconnected nodes to act as walls
+      if random.random() > obstacle_prob:
+        nodes.add(current)
+      else:
+        walls.add(current)
+  
+  for x,y in nodes:
+    graph[(x,y)] = {}
+
+    # check nodes in all 4 directions of current node
+    for dx, dy in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
+      neighbor = (x + dx, y + dy)
+
+      # check if neighbor is a node
+      if neighbor in nodes:
+        graph[(x, y)][neighbor] = 1
+  
+  return graph, start, goal, walls
         
 
 
