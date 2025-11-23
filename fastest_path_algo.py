@@ -1,5 +1,9 @@
 import heapq
 import random
+import time
+import matplotlib.pyplot as plt
+from matplotlib.colors import ListedColormap
+
 from typing import Tuple
 
 # Types
@@ -77,6 +81,8 @@ def dijkstra(graph, start_node, goal_node):
         came_from[neighbor_node] = current_node
         heapq.heappush(prio_queue, (new_cost, neighbor_node))
 
+  return float('inf'), nodes_explored, []
+
 def a_star(graph, start:Node, goal:Node):
 
   prio_queue = [(0, start)]
@@ -95,7 +101,6 @@ def a_star(graph, start:Node, goal:Node):
      for neighbor_node, weight in graph.get(current_node, {}).items():
        
        tentative_g_score = g_score[current_node] + weight
-       nodes_explored += 1
 
        if tentative_g_score < g_score.get(neighbor_node, float('inf')):
          g_score[neighbor_node] = tentative_g_score
@@ -111,6 +116,7 @@ def a_star(graph, start:Node, goal:Node):
          ## adds the f score to the priority queue
          ## using f score is what makes it prioritize nodes that are closer to the goal
          heapq.heappush(prio_queue, (f_score, neighbor_node))
+  return float('inf'), nodes_explored, []
 
 def bidirectional_dijkstra(graph, start_node, goal_node):
 
@@ -191,6 +197,10 @@ def bidirectional_dijkstra(graph, start_node, goal_node):
                 )
                 )
 
+  return float('inf'), shared_converge_state['num_nodes_explored'], []
+
+
+##CREATING THE GRID
 
 ## creates 2 dimensional graph with walls(holes)
 def create_grid(size, obstacle_prob=0.3):
@@ -229,6 +239,58 @@ def create_grid(size, obstacle_prob=0.3):
         graph[(x, y)][neighbor] = 1
   
   return graph, start, goal, walls
+
+def save_image(size, walls, path, title, filename):
+    grid_map = [[0] * size for _ in range(size)]
+    
+    for (wx, wy) in walls:
+        grid_map[wx][wy] = 1 
+    
+    if path:
+        for (px, py) in path:
+            grid_map[px][py] = 2 
+            
+    grid_map[0][0] = 3 
+    grid_map[size-1][size-1] = 3 
+
+    plt.figure(figsize=(5, 5))
+    
+   
+    cmap = ListedColormap(['white', 'black', 'dodgerblue', 'lime'])
+    
+    plt.imshow(grid_map, cmap=cmap, origin='upper')
+    plt.title(title)
+    plt.axis('off')
+    plt.savefig(filename)
+    print(f"   -> Saved image: {filename}")
+    plt.close()
         
+
+if __name__ == "__main__":
+    SIZE = 100
+    print(f"\n[EXPERIMENT] Racing on a {SIZE}x{SIZE} Grid Maze...")
+    grid_graph, start, goal, walls = create_grid(SIZE, obstacle_prob=0.25)
+    
+    print("-" * 65)
+    print(f"{'ALGORITHM':<25} | {'TIME (sec)':<10} | {'VISITED':<10} | {'COST'}")
+    print("-" * 65)
+
+    # Dijkstra
+    t0 = time.time()
+    cost, visited, path = dijkstra(grid_graph, start, goal)
+    print(f"{'Dijkstra':<25} | {time.time()-t0:.5f}     | {visited:<10} | {cost}")
+    save_image(SIZE, walls, path, f"Dijkstra (Visited: {visited})", "dijkstra.png")
+
+    # A*
+    t0 = time.time()
+    cost, visited, path = a_star(grid_graph, start, goal)
+    print(f"{'A* (Manhattan)':<25} | {time.time()-t0:.5f}     | {visited:<10} | {cost}")
+    save_image(SIZE, walls, path, f"A-Star (Visited: {visited})", "astar.png")
+
+    # Bidirectional
+    t0 = time.time()
+    cost, visited, path = bidirectional_dijkstra(grid_graph, start, goal)
+    print(f"{'Bidirectional':<25} | {time.time()-t0:.5f}     | {visited:<10} | {cost}")
+    save_image(SIZE, walls, path, f"Bidirectional (Visited: {visited})", "bidirectional.png")
 
 
