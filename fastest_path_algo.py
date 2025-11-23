@@ -24,7 +24,7 @@ def reconstruct_path(came_from, start, current_node, isForward=True):
 
   return path
 
-
+# used in A* to get distance to goal from current node
 def calc_heuristic(current_node, goal_node):
   curr_node_x = current_node[0]
   curr_node_y = current_node[1]
