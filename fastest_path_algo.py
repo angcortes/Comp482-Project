@@ -99,13 +99,72 @@ def bidirectional_dijkstra(graph, start_node, goal_node):
   prio_que_forw = [(0, start_node)]
   prio_que_back = [(0, goal_node)]
   
-  vis_cost_forw = {start_node:0}
-  vis_cost_back = {goal_node:0}
+  vis_forw = {start_node:0}
+  vis_back = {goal_node:0}
 
-  shared_convergence_state = {
+  parent_forw = {}
+  parent_back = {}
+
+  shared_converge_state = {
     'num_nodes_explored': 0,
     'meet_node': None,
-    'best_cost': float('inf')
+    'best_path_cost': float('inf')
   }
-  
+
+  def expand(prio_queue, parent, visited, other_search_visited, shared_state):
+
+    cost, current_node = heapq.heappop(prio_queue)
+    shared_state['num_nodes_explored'] += 1
+
+    # use other searches visited to check if a connection has been found
+    if current_node in other_search_visited:
+      total = cost + other_search_visited[current_node]
+
+      if total < shared_state['best_path_cost']:
+        shared_state['best_path_cost'] = total
+        shared_state['meet_node'] = current_node
+
+    if cost >= shared_state['best_path_cost']:
+        return
+      
+    for neighbor_node, weight in graph.get(current_node, {}).items():
+      new_cost = cost + weight
+
+      if new_cost < visited.get(neighbor_node, float('inf')):
+        visited[neighbor_node] = new_cost
+        parent[neighbor_node] = current_node
+
+        heapq.heappush(prio_queue, (new_cost, neighbor_node))
+
+  # loops while neither prio_queue is empty
+  while prio_que_forw and prio_que_back:
+
+    # Expands from starting node
+    expand(prio_que_forw,parent_forw, vis_forw, vis_back, shared_converge_state)
+
+    # Expands from goal node
+    expand(prio_que_back, parent_back, vis_back, vis_forw, shared_converge_state)
+
+    # stopping condition
+    # start checking stopping condition once a connection has been formed
+    if shared_converge_state['best_path_cost'] != float('inf'):
+      smallest_in_f_prio_que = None
+      smallest_in_b_prio_que = None
+
+      # grab the smallest element in the prio queues
+      if prio_que_forw:
+        smallest_in_f_prio_que = prio_que_forw[0][0]
+      else:
+        smallest_in_f_prio_que = float('inf')
+      if prio_que_back:
+        smallest_in_b_prio_que = prio_que_back[0][0]
+      else:
+        smallest_in_b_prio_que = float('inf')
+      
+      
+
+
+
+        
+
 
