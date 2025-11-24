@@ -48,10 +48,50 @@ def build_bi_path(parent_forward_dic, parent_back_dic, meet_node, start_node, go
   full_path = forward_path + backward_path[1:]
 
   return full_path
+
+# Animation functions
+def setup_live_grid(size, walls, title):
+  plt.ion()
+  fig, ax = plt.subplots(figsize=(6, 6))
   
+  # Initialize Grid: 0=Empty, 1=Wall
+  grid_map = [[0] * size for _ in range(size)]
+  for (wx, wy) in walls:
+      grid_map[wx][wy] = 1
+  
+  # Setup Colors: 0=White, 1=Black, 2=Blue (Visited), 3=Green (Path/Start/End)
+  cmap = ListedColormap(['white', 'black', 'dodgerblue', 'lime'])
+  
+  # Create the image object (we will update this object's data later)
+  img = ax.imshow(grid_map, cmap=cmap, origin='upper', vmin=0, vmax=3)
+  
+  ax.set_title(title)
+  ax.axis('off')
+  plt.show()
+  plt.pause(0.1) # Give the window a moment to appear
+  
+  return img, grid_map
+
+# Updates the plot with the visited node. Frequency controls speed
+def update_live_grid(img, grid_map, current_node, nodes_explored, frequency=10):
+    # Only update every Nth node to prevent lag
+    if nodes_explored % frequency == 0:
+        # Set pixel to 'Visited' color (2)
+        grid_map[current_node[0]][current_node[1]] = 2
+        
+        # Push data to the plot
+        img.set_data(grid_map)
+        
+        # Tiny pause to let the OS redraw the window
+        # 0.001 is fast, increase to 0.01 to slow it down
+        plt.pause(0.1)
 
 ## ALGOS
-def dijkstra(graph, start_node, goal_node):
+def dijkstra(graph, start_node, goal_node, size, walls, visualize=False):
+
+  # setup visulation
+  if visualize:
+    img, grid_map = setup_live_grid(size, walls, "Dijkstra Live")
 
   prio_queue = [(0, start_node)]
   visited_cost = {start_node: 0}
@@ -62,7 +102,17 @@ def dijkstra(graph, start_node, goal_node):
     cost, current_node = heapq.heappop(prio_queue)
     nodes_explored += 1
 
+    # update visualization
+    if visualize:
+            # frequency=20 means draw every 20 steps. Lower = smoother but slower.
+            update_live_grid(img, grid_map, current_node, nodes_explored, frequency=1)
+
     if current_node == goal_node:
+      # turns of interactive mode
+      if visualize:
+        plt.ioff()
+        plt.show()
+
       ## reconstruct path
       return visited_cost[current_node], nodes_explored, reconstruct_path(came_from, start_node, goal_node)
 
@@ -83,7 +133,11 @@ def dijkstra(graph, start_node, goal_node):
 
   return float('inf'), nodes_explored, []
 
-def a_star(graph, start, goal):
+def a_star(graph, start, goal, size, walls, visualize=False):
+
+  # visualization setup
+  if visualize:
+        img, grid_map = setup_live_grid(size, walls, "A* Live")
 
   prio_queue = [(0, start)]
   g_score = {start: 0}
@@ -95,8 +149,15 @@ def a_star(graph, start, goal):
      _, current_node = heapq.heappop(prio_queue)
      nodes_explored += 1
 
+     if visualize:
+        update_live_grid(img, grid_map, current_node, nodes_explored, frequency=1)     
+    
+
      if current_node == goal:
-       return g_score[current_node], nodes_explored, reconstruct_path(came_from, start, goal)
+      if visualize:
+        plt.ioff()
+        plt.show()
+      return g_score[current_node], nodes_explored, reconstruct_path(came_from, start, goal)
      
      for neighbor_node, weight in graph.get(current_node, {}).items():
        
@@ -267,23 +328,26 @@ def save_image(size, walls, path, title, filename):
         
 
 if __name__ == "__main__":
-    SIZE = 100
+    SIZE = 25
     print(f"\n[EXPERIMENT] Racing on a {SIZE}x{SIZE} Grid Maze...")
-    grid_graph, start, goal, walls = create_grid(SIZE, obstacle_prob=0.25)
+    grid_graph, start, goal, walls = create_grid(SIZE, obstacle_prob=0.35)
     
     print("-" * 65)
     print(f"{'ALGORITHM':<25} | {'TIME (sec)':<10} | {'VISITED':<10} | {'COST'}")
     print("-" * 65)
 
+    #live demo
+    a_star(grid_graph, start, goal, SIZE, walls, visualize=True)
+
     # Dijkstra
     t0 = time.time()
-    cost, visited, path = dijkstra(grid_graph, start, goal)
+    cost, visited, path = dijkstra(grid_graph, start, goal, SIZE, walls)
     print(f"{'Dijkstra':<25} | {time.time()-t0:.5f}     | {visited:<10} | {cost}")
     save_image(SIZE, walls, path, f"Dijkstra (Visited: {visited})", "dijkstra.png")
 
     # A*
     t0 = time.time()
-    cost, visited, path = a_star(grid_graph, start, goal)
+    cost, visited, path = a_star(grid_graph, start, goal,SIZE, walls)
     print(f"{'A* (Manhattan)':<25} | {time.time()-t0:.5f}     | {visited:<10} | {cost}")
     save_image(SIZE, walls, path, f"A-Star (Visited: {visited})", "astar.png")
 
