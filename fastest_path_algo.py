@@ -91,7 +91,7 @@ def dijkstra(graph, start_node, goal_node, size, walls, visualize=False):
 
   # setup visulation
   if visualize:
-    img, grid_map = setup_live_grid(size, walls, "Dijkstra Live")
+    img, grid_map = setup_live_grid(size, walls, "Dijkstra Visual")
 
   prio_queue = [(0, start_node)]
   visited_cost = {start_node: 0}
@@ -131,22 +131,26 @@ def dijkstra(graph, start_node, goal_node, size, walls, visualize=False):
         came_from[neighbor_node] = current_node
         heapq.heappush(prio_queue, (new_cost, neighbor_node))
 
+  if visualize:
+        print("Path not found! Keeping window open.")
+        plt.ioff()
+        plt.show()
   return float('inf'), nodes_explored, []
 
 def a_star(graph, start, goal, size, walls, visualize=False):
 
   # visualization setup
   if visualize:
-        img, grid_map = setup_live_grid(size, walls, "A* Live")
+        img, grid_map = setup_live_grid(size, walls, "A* Visual")
 
-  prio_queue = [(0, start)]
+  prio_queue = [(0,0, start)]
   g_score = {start: 0}
   came_from = {}
   nodes_explored = 0
 
   while prio_queue:
     # f_score only matters for the order it will be explored
-     _, current_node = heapq.heappop(prio_queue)
+     _,_, current_node = heapq.heappop(prio_queue)
      nodes_explored += 1
 
      if visualize:
@@ -176,10 +180,20 @@ def a_star(graph, start, goal, size, walls, visualize=False):
 
          ## adds the f score to the priority queue
          ## using f score is what makes it prioritize nodes that are closer to the goal
-         heapq.heappush(prio_queue, (f_score, neighbor_node))
+         heapq.heappush(prio_queue, (f_score, h, neighbor_node))
+  
+  if visualize:
+        print("Path not found! Keeping window open.")
+        plt.ioff()
+        plt.show()
+
   return float('inf'), nodes_explored, []
 
-def bidirectional_dijkstra(graph, start_node, goal_node):
+def bidirectional_dijkstra(graph, start_node, goal_node, size, walls, visualize=False):
+
+  # visualization setup
+  if visualize:
+        img, grid_map = setup_live_grid(size, walls, "Bidirectional Dijkstra Visual")
 
   prio_que_forw = [(0, start_node)]
   prio_que_back = [(0, goal_node)]
@@ -200,6 +214,11 @@ def bidirectional_dijkstra(graph, start_node, goal_node):
 
     cost, current_node = heapq.heappop(prio_queue)
     shared_state['num_nodes_explored'] += 1
+
+    # visual update
+    if visualize:
+             # Uses shared_state counter for frequency check
+             update_live_grid(img, grid_map, current_node, shared_state['num_nodes_explored'], frequency=1)
 
     # use other searches visited to check if a connection has been found
     if current_node in other_search_visited:
@@ -247,6 +266,9 @@ def bidirectional_dijkstra(graph, start_node, goal_node):
         smallest_in_b_prio_que = float('inf')
       
       if smallest_in_f_prio_que + smallest_in_b_prio_que >= shared_converge_state['best_path_cost']:
+        if visualize:
+           plt.ioff()
+           plt.show()
         return (shared_converge_state['best_path_cost'], 
                 shared_converge_state['num_nodes_explored'],
                 build_bi_path(
@@ -258,6 +280,10 @@ def bidirectional_dijkstra(graph, start_node, goal_node):
                 )
                 )
 
+  if visualize:
+        print("Path not found! Keeping window open.")
+        plt.ioff()
+        plt.show()
   return float('inf'), shared_converge_state['num_nodes_explored'], []
 
 
@@ -328,16 +354,16 @@ def save_image(size, walls, path, title, filename):
         
 
 if __name__ == "__main__":
-    SIZE = 25
+    SIZE = 20
     print(f"\n[EXPERIMENT] Racing on a {SIZE}x{SIZE} Grid Maze...")
-    grid_graph, start, goal, walls = create_grid(SIZE, obstacle_prob=0.35)
+    grid_graph, start, goal, walls = create_grid(SIZE, obstacle_prob=0.1)
     
     print("-" * 65)
     print(f"{'ALGORITHM':<25} | {'TIME (sec)':<10} | {'VISITED':<10} | {'COST'}")
     print("-" * 65)
 
     #live demo
-    a_star(grid_graph, start, goal, SIZE, walls, visualize=True)
+    bidirectional_dijkstra(grid_graph, start, goal, SIZE, walls, visualize=True)
 
     # Dijkstra
     t0 = time.time()
@@ -353,7 +379,7 @@ if __name__ == "__main__":
 
     # Bidirectional
     t0 = time.time()
-    cost, visited, path = bidirectional_dijkstra(grid_graph, start, goal)
+    cost, visited, path = bidirectional_dijkstra(grid_graph, start, goal, SIZE, walls)
     print(f"{'Bidirectional':<25} | {time.time()-t0:.5f}     | {visited:<10} | {cost}")
     save_image(SIZE, walls, path, f"Bidirectional (Visited: {visited})", "bidirectional.png")
 
