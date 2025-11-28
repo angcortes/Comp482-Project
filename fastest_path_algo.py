@@ -265,6 +265,7 @@ def bidirectional_dijkstra(graph, start_node, goal_node, size, walls, visualize=
       else:
         smallest_in_b_prio_que = float('inf')
       
+      # check if the smallest path in the prio queue can beat the current smallest connected path
       if smallest_in_f_prio_que + smallest_in_b_prio_que >= shared_converge_state['best_path_cost']:
         if visualize:
            plt.ioff()
@@ -286,6 +287,110 @@ def bidirectional_dijkstra(graph, start_node, goal_node, size, walls, visualize=
         plt.show()
   return float('inf'), shared_converge_state['num_nodes_explored'], []
 
+def bidirectional_a_star(graph, start, goal, size, walls, visualize=False):
+    
+  # setup animated visualization
+  if visualize:
+      img, grid_map = setup_live_grid(size, walls, "Bidirectional A* visual")
+  else:
+      img, grid_map = None, None
+
+  # Heuristic Functions
+  # Forward search aims for Goal
+  def heur_fwd(n): 
+    return calc_heuristic(n, goal)
+  # Backward search aims for Start
+  def heur_bwd(n): 
+    return calc_heuristic(n, start)
+
+  start_h = heur_fwd(start)
+  goal_h = heur_bwd(goal)
+
+   # Priority Queues: Stores (f_score, h_score, node)
+  # We include h_score for tie-breaking
+  prio_que_forw = [(start_h, start_h, start)]
+  prio_que_back = [(goal_h, goal_h, goal)]
+  
+  # G-Scores (The real distance traveled)
+  g_forw = {start: 0}
+  g_back = {goal: 0}
+
+  # Parents for path reconstruction
+  parent_forw = {start: None}
+  parent_back = {goal: None}
+
+  shared_state = {
+      'num_nodes_explored': 0,
+      'meet_node': None,
+      'best_path_cost': float('inf')
+  }
+
+  def expand(prio_queue, g_scores, parent, other_g_scores, get_heuristic):
+      # Pop the node with lowest F-Score
+      # (f, h, node)
+      # only the current_node matters once popped
+      _, _, current_node = heapq.heappop(prio_queue)
+      
+      shared_state['num_nodes_explored'] += 1
+
+      # Visualization
+      if visualize:
+          update_live_grid(img, grid_map, current_node, shared_state['num_nodes_explored'], frequency=1)
+
+      # CHECK FOR CONNECTION
+      if current_node in other_g_scores:
+          total = g_scores[current_node] + other_g_scores[current_node]
+          if total < shared_state['best_path_cost']:
+              shared_state['best_path_cost'] = total
+              shared_state['meet_node'] = current_node
+      
+      # If this path is already worse than the best known complete path, stop.
+      # We compare g-score (real cost), not f-score here for safety
+      if g_scores[current_node] >= shared_state['best_path_cost']:
+          return
+
+      # itterate through current nodes connected neighbors
+      for neighbor, weight in graph.get(current_node, {}).items():
+          tentative_g = g_scores[current_node] + weight
+          
+          if tentative_g < g_scores.get(neighbor, float('inf')):
+              g_scores[neighbor] = tentative_g
+              parent[neighbor] = current_node
+              
+              # Calculate F-Score = G + H
+              h_val = get_heuristic(neighbor)
+              f_val = tentative_g + h_val
+              
+              # Push (f, h, node) for tie-breaking
+              heapq.heappush(prio_queue, (f_val, h_val, neighbor))
+
+  while prio_que_forw and prio_que_back:
+      # Expand Forward (Using Forward Heuristic)
+      expand(prio_que_forw, g_forw, parent_forw, g_back, heur_fwd)
+
+      # Expand Backward (Using Backward Heuristic)
+      expand(prio_que_back, g_back, parent_back, g_forw, heur_bwd)
+
+      # STOPPING CONDITION
+      # If the smallest F-value in either queue is >= best_path_cost, 
+      # we can't possibly find a better path.
+      if shared_state['best_path_cost'] != float('inf'):
+          min_f_fwd = prio_que_forw[0][0] if prio_que_forw else float('inf')
+          min_f_bwd = prio_que_back[0][0] if prio_que_back else float('inf')
+          
+          # We take the MAX of the mins because if EITHER side's minimum potential 
+          # is worse than our current best path, that side can't contribute a better solution. 
+          if min(min_f_fwd, min_f_bwd) >= shared_state['best_path_cost']:
+              if visualize: plt.ioff(); plt.show()
+              return (shared_state['best_path_cost'], 
+                      shared_state['num_nodes_explored'],
+                      build_bi_path(parent_forw, parent_back, shared_state['meet_node'], start, goal))
+
+  if visualize:
+        print("Path not found! Keeping window open.")
+        plt.ioff()
+        plt.show()
+  return float('inf'), shared_state['num_nodes_explored'], []
 
 ##CREATING THE GRID
 
@@ -363,7 +468,7 @@ if __name__ == "__main__":
     print("-" * 65)
 
     #live demo
-    bidirectional_dijkstra(grid_graph, start, goal, SIZE, walls, visualize=True)
+    bidirectional_a_star(grid_graph, start, goal, SIZE, walls, visualize=True)
 
     # Dijkstra
     t0 = time.time()
@@ -377,10 +482,16 @@ if __name__ == "__main__":
     print(f"{'A* (Manhattan)':<25} | {time.time()-t0:.5f}     | {visited:<10} | {cost}")
     save_image(SIZE, walls, path, f"A-Star (Visited: {visited})", "astar.png")
 
-    # Bidirectional
+    # Bidirectional Dijkstra
     t0 = time.time()
     cost, visited, path = bidirectional_dijkstra(grid_graph, start, goal, SIZE, walls)
     print(f"{'Bidirectional':<25} | {time.time()-t0:.5f}     | {visited:<10} | {cost}")
-    save_image(SIZE, walls, path, f"Bidirectional (Visited: {visited})", "bidirectional.png")
+    save_image(SIZE, walls, path, f"Bidirectional (Visited: {visited})", "bidirectional_dijkstra.png")
+
+    # Bidirectional A*
+    t0 = time.time()
+    cost, visited, path = bidirectional_a_star(grid_graph, start, goal, SIZE, walls)
+    print(f"{'Bidirectional A*':<25} | {time.time()-t0:.5f}     | {visited:<10} | {cost}")
+    save_image(SIZE, walls, path, f"Bidirectional A* (Visited: {visited})", "bidirectional_a_star.png")
 
 
