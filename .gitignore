@@ -5,6 +5,10 @@ __pycache__/
 
 # stuff I added
 test259.py
+astar.png
+bidirectional_a_star.png
+bidirectional_dijkstra.png
+dijkstra.png
 
 # C extensions
 *.so
