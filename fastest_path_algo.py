@@ -2,6 +2,7 @@ import heapq
 import random
 import time
 import matplotlib.pyplot as plt
+import argparse
 from matplotlib.colors import ListedColormap
 
 from typing import Tuple
@@ -459,16 +460,29 @@ def save_image(size, walls, path, title, filename):
         
 
 if __name__ == "__main__":
-    SIZE = 20
-    print(f"\n[EXPERIMENT] Racing on a {SIZE}x{SIZE} Grid Maze...")
-    grid_graph, start, goal, walls = create_grid(SIZE, obstacle_prob=0.1)
+    parser = argparse.ArgumentParser(description="Home Assignment2-COMP482")
+    parser.add_argument("-s", "--size", type=int, default=20, help="size of the axes on the grid(they are symmetrical)")
+    parser.add_argument("-v", "--visual", action="store_true", help="allow visualization of algos on the graph")
+    parser.add_argument("-o","--obstacle", type=float, default = .15, help="decimal percantage chance of obstacle appearing on grid")
+    args = parser.parse_args()
+
+
+    SIZE = args.size
+    OBSTACLE_PROBABILITY = args.obstacle
+    DO_WE_WANT_VISUAL_RUN = args.visual
+
+    print(f"\n Racing on a {SIZE}x{SIZE} Grid Maze")
+    grid_graph, start, goal, walls = create_grid(SIZE, obstacle_prob= OBSTACLE_PROBABILITY)
     
     print("-" * 65)
     print(f"{'ALGORITHM':<25} | {'TIME (sec)':<10} | {'VISITED':<10} | {'COST'}")
     print("-" * 65)
 
     #live demo
-    bidirectional_a_star(grid_graph, start, goal, SIZE, walls, visualize=True)
+    if DO_WE_WANT_VISUAL_RUN:
+      bidirectional_a_star(grid_graph, start, goal, SIZE, walls, visualize=True)
+      a_star(grid_graph, start, goal, SIZE, walls, visualize=True)
+      bidirectional_dijkstra(grid_graph, start, goal, SIZE, walls, visualize=True)
 
     # Dijkstra
     t0 = time.time()
